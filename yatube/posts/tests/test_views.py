@@ -157,12 +157,11 @@ class PaginatorViewsTest(TestCase):
             description='Тестовое описание группы'
         )
 
-        for i in range(settings.NUM_OF_POSTS + TEST_PAG_3):
-            Post.objects.create(
-                text='Тестовый текст поста',
-                author=cls.author,
-                group=cls.group
-            )
+        obj = ((Post(text='Тестовый текст поста',
+                     author=cls.author,
+                     group=cls.group)
+                for i in range(settings.NUM_OF_POSTS + TEST_PAG_3)))
+        Post.objects.bulk_create(obj)
 
         cls.paginator_page = (
             reverse('posts:index'),

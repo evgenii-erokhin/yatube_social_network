@@ -21,5 +21,7 @@ class PostModelTest(TestCase):
 
     def test_models_have_correct_object_names(self):
         """Проверяем, что у моделей корректно работает __str__."""
-        self.assertEqual(str(PostModelTest.group), PostModelTest.group.title)
-        self.assertEqual(str(PostModelTest.post.text[:settings.NUMBER_VISIBLE_SYMBL]), PostModelTest.post.text)
+        self.assertEqual(PostModelTest.post.text
+                         [:settings.NUMBER_VISIBLE_SYMBL],
+                         str(PostModelTest.post))
+        self.assertEqual(PostModelTest.group.title, str(PostModelTest.group))
