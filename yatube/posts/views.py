@@ -23,9 +23,7 @@ def group_posts(request, slug):
 def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.all()
-    following = False
-    if Follow.objects.filter(user=request.user.id, author=author):
-        following = True
+    following = Follow.objects.filter(user=request.user.id, author=author)
     return render(request, 'posts/profile.html',
                   {'page_obj': get_pages(request, posts),
                    'author': author,
@@ -91,8 +89,8 @@ def follow_index(request):
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
     if author != request.user:
-        if Follow.objects.filter(user=request.user, author=author):
-            return redirect('posts:profile', username)
+        Follow.objects.get_or_create(user=request.user, author=author)
+        return redirect('posts:profile', username)
     if author == request.user:
         return redirect('posts:profile', username)
     Follow.objects.create(user=request.user, author=author)

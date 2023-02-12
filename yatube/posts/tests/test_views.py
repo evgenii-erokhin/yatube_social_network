@@ -21,6 +21,11 @@ class PostPagesTest(TestCase):
         super().setUpClass()
         cls.user = User.objects.create_user(username='user')
         cls.author = User.objects.create_user(username='author')
+        cls.follower = User.objects.create_user(username='follower')
+        cls.follow = Follow.objects.create(
+            author=cls.author,
+            user=cls.follower
+        )
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -57,6 +62,16 @@ class PostPagesTest(TestCase):
                     kwargs={'post_id': PostPagesTest.post.id}):
                    ('posts/create_post.html'),
         }
+        cls.another_private_reference = {
+            reverse('posts:follow_index'): 'posts/follow.html',
+            reverse('posts:profile_follow',
+                    kwargs={'username': cls.author}): 'posts/profile.html',
+            reverse('posts:profile_unfollow',
+                    kwargs={'username': cls.author}): 'posts/profile.html',
+            reverse('posts:add_comment',
+                    kwargs={'post_id': PostPagesTest.post.id}):
+                   ('posts/post_detail.html'),
+        }
         cls.public_reference = {
             reverse('posts:index'): 'posts/index.html',
             reverse('posts:group_list',
@@ -78,6 +93,16 @@ class PostPagesTest(TestCase):
         self.authorized_client.force_login(self.author)
         self.authorized_user = Client()
         self.authorized_user.force_login(self.user)
+        self.authorized_follower = Client()
+        self.authorized_follower.force_login(self.follower)
+
+    def test_another_private_pages_use_correct_template(self):
+        """URL-адрес использует соответствующий шаблон"""
+        for reverse_name, template in self.another_private_reference.items():
+            with self.subTest(reverse_name=reverse_name):
+                response = (self.authorized_client.get
+                            (reverse_name, follow=True))
+                self.assertTemplateUsed(response, template)
 
     def test_pages_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
@@ -127,6 +152,17 @@ class PostPagesTest(TestCase):
                          PostPagesTest.post.image)
         self.assertEqual(response.context.get('posts').text,
                          PostPagesTest.post.text)
+
+    def test_follow_index(self):
+        """Проверяем, что новая запись пользователя появляется
+        в ленте тех, кто на него подписан"""
+        response = self.authorized_follower.get(reverse('posts:follow_index'))
+        first_object = response.context['page_obj'][0]
+
+        self.assertIsInstance(first_object, Post)
+        self.assertEqual(first_object.author, PostPagesTest.author)
+        self.assertEqual(first_object.group, PostPagesTest.group)
+        self.assertEqual(first_object.text, PostPagesTest.post.text)
 
     def test_post_show_correct(self):
         """Проверка, что созданый пост появляется
@@ -196,6 +232,9 @@ class FollowOnProfile(TestCase):
             text='Ещё один пост на тест',
             author=cls.author
         )
+        cls.followers = reverse('posts:profile',
+                                kwargs={'username': FollowOnProfile.author})
+        cls.follow_index = reverse('posts:follow_index')
 
     def setUp(self):
         self.author_client = Client()
@@ -207,9 +246,7 @@ class FollowOnProfile(TestCase):
 
     def test_follow_view_correct_works(self):
         """Тест на подписку автора"""
-        self.non_author_client.get(
-            reverse('posts:profile',
-                    kwargs={'username': FollowOnProfile.author}))
+        self.non_author_client.get(FollowOnProfile.followers)
         self.assertTrue(Follow.objects.filter(user=FollowOnProfile.follower,
                         author=FollowOnProfile.author).exists())
 
@@ -223,9 +260,7 @@ class FollowOnProfile(TestCase):
             user=FollowOnProfile.follower,
             author=FollowOnProfile.author
         )
-        response = self.non_author_client.get(
-            reverse('posts:follow_index')
-        )
+        response = self.non_author_client.get(FollowOnProfile.follow_index)
         post_follower = response.context['page_obj'][0]
         self.assertEqual(post_follower.text, new_post.text)
 
@@ -239,6 +274,6 @@ class FollowOnProfile(TestCase):
             user=FollowOnProfile.follower,
             author=FollowOnProfile.author
         )
-        response = self.not_follower_client.get(reverse('posts:follow_index'))
+        response = self.not_follower_client.get(FollowOnProfile.follow_index)
         post_not_follower = response.context['page_obj']
         self.assertNotIn(new_post_for_follower, post_not_follower)
