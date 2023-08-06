@@ -5,8 +5,8 @@
 __Yatube__ is a social network where you can follow bloggers, share your content and join the community
  ## Technology
 
- - Python 3.9
- - Django 2.2.19
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![Django](https://img.shields.io/badge/django-%23092E20.svg?style=for-the-badge&logo=django&logoColor=white)
  
  ## How to run a project in dev mode
 
